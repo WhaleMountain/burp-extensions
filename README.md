@@ -1,5 +1,7 @@
 # Filter Unique Requests
 
+Burp extender
+
 ### Manual Installation
 
 1. Clone this repository to your machine
