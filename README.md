@@ -1,17 +1,19 @@
 # Filter Unique Requests
 
-## Installation
-### Manually
+### Manual Installation
 
 1. Clone this repository to your machine
-1. Go to *Extender > Extensions* tab
-1. Click on the *Add*
-1. On the window, browse the location of *filter-unique-requests.py* and click the *Next*
+1. Go to **Extender > Extensions** tab
+1. Click on the **Add**
+1. On the window, browse the location of **filter-unique-requests.py** and click the **Next**
 
-## Usage
+### Usage
 
-1. Go to **Extender > Extensions* tab
-1. Check *Filter Unique Requests*
+1. Go to **Extender > Extensions** tab
+1. Check **Filter Unique Requests**
+1. Go to **Proxy > HTTP history** tab
+1. Click on the **Filter**
+1. Check **Show only highlighted items**
 
 ### Reference
 
