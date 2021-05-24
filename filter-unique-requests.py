@@ -28,6 +28,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IProxyListener):
 
         requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
         url = requestInfo.getUrl()
+        method = requestInfo.getMethod()
         params = requestInfo.getParameters()
         
         # 対象スコープでない場合は無視
@@ -37,12 +38,12 @@ class BurpExtender(IBurpExtender, IHttpListener, IProxyListener):
         query = ""
         for param in params:
             if param.getType() == IParameter.PARAM_JSON and param.getName() == "query":
-                query = param.getValue()     
-
+                query = param.getValue()
         if url in self.uniqueRequests.keys():
-            if query not in self.uniqueRequests[url]:
-                self.uniqueRequests[url].append(query)
+            if query not in self.uniqueRequests[url][method]:
+                self.uniqueRequests[url][method].append(query)
                 messageInfo.setHighlight(self.color)
         else:
-            self.uniqueRequests[url] = [query]
+            self.uniqueRequests[url] = { method: [query] }
+            #self._stdout.println(self.uniqueRequests.items())
             messageInfo.setHighlight(self.color)
