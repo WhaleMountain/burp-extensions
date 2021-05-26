@@ -4,6 +4,14 @@ Burp extender
 
 **ちょっと色々改良中です。**
 
+---
+
+- `filter-graphql-request.py`
+    - GraphQL専用
+- `filter-unique-requests.py`
+    - 全ての通信において1回のみハイライトしたい...
+    - バグります
+
 ### Manual Installation
 
 1. Clone this repository to your machine
