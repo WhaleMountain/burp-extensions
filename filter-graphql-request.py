@@ -2,14 +2,13 @@
 
 from burp import IBurpExtender
 from burp import IHttpListener
-from burp import IProxyListener
 from burp import IParameter
 from java.io import PrintWriter
 
-class BurpExtender(IBurpExtender, IHttpListener, IProxyListener):
+class BurpExtender(IBurpExtender, IHttpListener):
     extentionName       = "Filter Graphql Request"
     color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, black
-    graphqlRequests     = [] # Key: url, value: { method: query }
+    graphqlRequests     = []
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
