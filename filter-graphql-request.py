@@ -7,9 +7,9 @@ from burp import IParameter
 from java.io import PrintWriter
 
 class BurpExtender(IBurpExtender, IHttpListener, IProxyListener):
-    extentionName       = "Filter Unique Requests"
+    extentionName       = "Filter Graphql Request"
     color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, black
-    uniqueRequests      = {} # Key: url, value: { method: query }
+    graphqlRequests     = [] # Key: url, value: { method: query }
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -33,16 +33,15 @@ class BurpExtender(IBurpExtender, IHttpListener, IProxyListener):
         if not self._callbacks.isInScope(url):
             return
 
+        # Graphql ハンター
+        if "/graphql" not in url.toString():
+            return
+
         query = ""
         for param in params:
             if param.getType() == IParameter.PARAM_JSON and param.getName() == "query":
                 query = param.getValue()
 
-        if url in self.uniqueRequests.keys():
-            if query not in self.uniqueRequests[url][method]:
-                self.uniqueRequests[url][method].append(query)
-                messageInfo.setHighlight(self.color)
-        else:
-            self.uniqueRequests[url] = { method: [query] }
+        if query != "" and query not in self.graphqlRequests:
+            self.graphqlRequests.append(query)
             messageInfo.setHighlight(self.color)
-            self._stdout.println(self.uniqueRequests.items())

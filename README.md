@@ -2,6 +2,8 @@
 
 Burp extender
 
+**ちょっと色々改良中です。**
+
 ### Manual Installation
 
 1. Clone this repository to your machine
