@@ -4,7 +4,7 @@
 
 ### Extension
 
-* [Highligh GraphQL Request](./highligh-graphql-request)
+* [Highligh GraphQL Request](./highlight-graphql-request)
 
 ### Reference
 
