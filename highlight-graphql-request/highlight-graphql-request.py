@@ -6,7 +6,7 @@ from burp import IParameter
 from java.io import PrintWriter
 
 class BurpExtender(IBurpExtender, IHttpListener):
-    extentionName       = "Filter Graphql Request"
+    extentionName       = "Highlight GraphQL Request"
     color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, black
     graphqlRequests     = []
     
@@ -32,7 +32,7 @@ class BurpExtender(IBurpExtender, IHttpListener):
         if not self._callbacks.isInScope(url):
             return
 
-        # Graphql ハンター
+        # Only GraphQL
         if "/graphql" not in url.toString():
             return
 
