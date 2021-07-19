@@ -5,6 +5,7 @@
 ### Extension
 
 * [Highligh GraphQL Request](./highlight-graphql-request)
+* [Support Copy Request TSV](./support-copy-request-tsv)
 
 ### Reference
 
