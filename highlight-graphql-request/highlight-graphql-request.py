@@ -8,7 +8,7 @@ from java.io import PrintWriter
 
 class BurpExtender(IBurpExtender, IHttpListener):
     extentionName       = "Highlight GraphQL Request"
-    color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, black
+    color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
     endpoint            = "/graphql"
     graphqlRequests     = []   
     
