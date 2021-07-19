@@ -41,7 +41,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
         url         = requestInfo.getUrl()
         method      = requestInfo.getMethod()
         params      = requestInfo.getParameters()
-        method_url  = method+str(url)
+        method_url  = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
         # 対象スコープでない場合は無視
         if not self._callbacks.isInScope(url):
             return
@@ -54,9 +54,11 @@ class BurpExtender(IBurpExtender, IProxyListener):
         
         # どのリクエストがパラメータが多いか比較する
         if len(someRequestInfo[self.histRequestParamKey]) < len(params):
-            self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey]], messageRef)
+            #self._stdout.println('#{} < #{}'.format(someRequestInfo[self.histRequestRefKey], messageRef))
+            self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
             self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestParamKey: params}
         else:
+            #self._stdout.println('#{} >= #{}'.format(someRequestInfo[self.histRequestRefKey], messageRef))
             self.setHighlightAndComment(messageInfo, someRequestInfo[self.histRequestRefKey])
 
     # historyRequestsから値を取得する
