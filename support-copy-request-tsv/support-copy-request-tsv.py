@@ -25,6 +25,29 @@ class BurpExtender(IBurpExtender, IProxyListener):
 
         self.proxyHistCounter = len(callbacks.getProxyHistory())
         self._stdout.println('Start offset: {}'.format(self.proxyHistCounter))
+        self.extensionLoaded()
+
+    def extensionLoaded(self):
+        for idx, messageInfo in enumerate(self._callbacks.getProxyHistory()):
+            requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
+            #self.comparisonRequest(idx + 1, requestInfo, messageInfo)
+            url         = requestInfo.getUrl()
+            method      = requestInfo.getMethod()
+            params      = requestInfo.getParameters()
+            method_url  = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
+            # 対象スコープでない場合は無視
+            if not self._callbacks.isInScope(url):
+                continue
+
+            someRequestInfo = self.getSomeRequest(method_url)
+            # 未取得のリクエストならhistoryRequestsに保存する
+            if someRequestInfo == "":
+                self.historyRequests[method_url] = {self.histRequestRefKey: idx + 1, self.histRequestParamKey: params}
+                continue
+            
+            # どのリクエストがパラメータが多いか比較する
+            if len(someRequestInfo[self.histRequestParamKey]) < len(params):
+                self.historyRequests[method_url] = {self.histRequestRefKey: idx + 1, self.histRequestParamKey: params}
 
     def processProxyMessage(self, messageIsRequest, message):
         # リクエストのみ
@@ -54,11 +77,9 @@ class BurpExtender(IBurpExtender, IProxyListener):
         
         # どのリクエストがパラメータが多いか比較する
         if len(someRequestInfo[self.histRequestParamKey]) < len(params):
-            #self._stdout.println('#{} < #{}'.format(someRequestInfo[self.histRequestRefKey], messageRef))
             self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
             self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestParamKey: params}
         else:
-            #self._stdout.println('#{} >= #{}'.format(someRequestInfo[self.histRequestRefKey], messageRef))
             self.setHighlightAndComment(messageInfo, someRequestInfo[self.histRequestRefKey])
 
     # historyRequestsから値を取得する

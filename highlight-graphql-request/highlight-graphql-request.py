@@ -20,9 +20,8 @@ class BurpExtender(IBurpExtender, IHttpListener):
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerHttpListener(self)
 
-        proxyHistReqs = callbacks.getProxyHistory()
-        for proxyHistReq in proxyHistReqs:
-            requestInfo = self._helpers.analyzeRequest(proxyHistReq)
+        for messageInfo in callbacks.getProxyHistory():
+            requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
             self.uniqueRequest(requestInfo)
     
     def processHttpMessage(self, toolFlag, messageIsRequest, messageInfo):
