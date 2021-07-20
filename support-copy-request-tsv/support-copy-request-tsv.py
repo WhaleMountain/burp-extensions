@@ -22,15 +22,15 @@ class BurpExtender(IBurpExtender, IProxyListener):
 
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerProxyListener(self)
-
-        self.proxyHistCounter = len(callbacks.getProxyHistory())
-        self._stdout.println('Start offset: {}'.format(self.proxyHistCounter))
         self.extensionLoaded()
 
     def extensionLoaded(self):
-        for idx, messageInfo in enumerate(self._callbacks.getProxyHistory()):
+        proxyHistory = self._callbacks.getProxyHistory()
+        self.proxyHistCounter = len(proxyHistory)
+        self._stdout.println('Start offset: {}'.format(self.proxyHistCounter))
+
+        for idx, messageInfo in enumerate(proxyHistory):
             requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
-            #self.comparisonRequest(idx + 1, requestInfo, messageInfo)
             url         = requestInfo.getUrl()
             method      = requestInfo.getMethod()
             params      = requestInfo.getParameters()
@@ -41,7 +41,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
 
             someRequestInfo = self.getSomeRequest(method_url)
             # 未取得のリクエストならhistoryRequestsに保存する
-            if someRequestInfo == "":
+            if someRequestInfo == None:
                 self.historyRequests[method_url] = {self.histRequestRefKey: idx + 1, self.histRequestParamKey: params}
                 continue
             
@@ -71,7 +71,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
 
         someRequestInfo = self.getSomeRequest(method_url)
         # 未取得のリクエストならhistoryRequestsに保存する
-        if someRequestInfo == "":
+        if someRequestInfo == None:
             self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestParamKey: params}
             return
         
@@ -87,7 +87,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
         try:
             return self.historyRequests[key]
         except KeyError:
-            return ""
+            return None
 
     def setHighlightAndComment(self, messageInfo, ref):
         messageInfo.setHighlight(self.color)
