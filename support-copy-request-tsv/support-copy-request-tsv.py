@@ -9,7 +9,7 @@ from java.io import PrintWriter
 class BurpExtender(IBurpExtender, IProxyListener):
     extentionName        = "Support Copy Request TSV"
     color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-    comment              = "#{} has equal or more parameters"
+    comment              = "#{} has equal or greater parameters"
     proxyHistCounter     = 0
     historyRequests      = {} # {Method+URL: {ref: getMessageReference(), parameters: getParameters()}}
     histRequestRefKey    = "ref"
