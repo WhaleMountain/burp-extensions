@@ -7,10 +7,11 @@ from burp import IBurpExtenderCallbacks
 from java.io import PrintWriter
 
 class BurpExtender(IBurpExtender, IProxyListener):
-    extentionName       = "Highlight GraphQL Request"
-    color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-    endpoint            = "/graphql"
-    graphqlRequests     = []   
+    def __init__(self):
+        self.extentionName       = "Highlight GraphQL Request"
+        self.color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
+        self.endpoint            = "/graphql"
+        self.graphqlRequests     = []   
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks

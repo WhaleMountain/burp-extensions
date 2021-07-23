@@ -1,19 +1,46 @@
 # coding: UTF-8
 
+from burp import ITab
 from burp import IBurpExtender
 from burp import IProxyListener
 from burp import IParameter
 from burp import IBurpExtenderCallbacks
 from java.io import PrintWriter
+from javax.swing import JPanel, JButton, JProgressBar
+from java.awt import BorderLayout
+from java.awt.event import ActionListener
 
-class BurpExtender(IBurpExtender, IProxyListener):
-    extentionName        = "Support Copy Request TSV"
-    color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-    comment              = "#{} has equal or greater parameters"
-    proxyHistCounter     = 0
-    historyRequests      = {} # {Method+URL: {ref: getMessageReference(), parameters: getParameters()}}
-    histRequestRefKey    = "ref"
-    histRequestParamKey    = "parameters"
+class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
+    def __init__(self):
+        self.extentionName        = "Support Copy Request TSV"
+        self.color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
+        self.comment              = "#{} has equal or greater parameters"
+        self.proxyHistCounter     = 0
+        self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), parameters: getParameters()}}
+        self.histRequestRefKey    = "ref"
+        self.histRequestParamKey  = "parameters"
+        #self.extensionLoaded()
+        # create panels
+        self._main_panel      = JPanel(BorderLayout())
+        self._button_panel    = JPanel()
+
+        # create buttons
+        self._btn1 = JButton("0")
+        self._btn1.addActionListener(self)
+        self._button_panel.add(self._btn1)
+
+        # add panels to the main_panel
+        self._main_panel.add(self._button_panel, BorderLayout.PAGE_START)
+
+    def getTabCaption(self):
+        return "Support Copy Request TSV"
+
+    def getUiComponent(self):
+        return self._main_panel
+
+    def actionPerformed(self, event):
+        if event.getSource() is self._btn1:
+            self._btn1.text = str(int(self._btn1.text) + 1)
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -22,7 +49,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
 
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerProxyListener(self)
-        self.extensionLoaded()
+        callbacks.addSuiteTab(self)
 
     def extensionLoaded(self):
         proxyHistory = self._callbacks.getProxyHistory()
