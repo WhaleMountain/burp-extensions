@@ -6,8 +6,7 @@ from burp import IProxyListener
 from burp import IParameter
 from burp import IBurpExtenderCallbacks
 from java.io import PrintWriter
-from javax.swing import JPanel, JButton, JProgressBar
-from java.awt import BorderLayout
+from javax.swing import JPanel, JButton, JLabel
 from java.awt.event import ActionListener
 
 class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
@@ -21,16 +20,38 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self.histRequestParamKey  = "parameters"
         #self.extensionLoaded()
         # create panels
-        self._main_panel      = JPanel(BorderLayout())
-        self._button_panel    = JPanel()
+        self._main_panel        = JPanel()
+        listener_panel    = JPanel()
+        check_panel       = JPanel()
+        clear_panel       = JPanel()
 
         # create buttons
-        self._btn1 = JButton("0")
-        self._btn1.addActionListener(self)
-        self._button_panel.add(self._btn1)
+        listener_label = JLabel("ProxyListener")
+        listener_panel.add(listener_label)
+
+        self._start_listener_btn = JButton("Start")
+        self._start_listener_btn.addActionListener(self)
+        listener_panel.add(self._start_listener_btn)
+
+        self._stop_listener_btn = JButton("Stop")
+        self._stop_listener_btn.addActionListener(self)
+        self._stop_listener_btn.setEnabled(False)
+        listener_panel.add(self._stop_listener_btn)
+
+        check_label = JLabel("Check All")
+        self._check_btn = JButton("Check")
+        check_panel.add(check_label)
+        check_panel.add(self._check_btn)
+
+        clear_label = JLabel("Clear All")
+        self._clear_btn = JButton("Clear")
+        clear_panel.add(clear_label)
+        clear_panel.add(self._clear_btn)
 
         # add panels to the main_panel
-        self._main_panel.add(self._button_panel, BorderLayout.PAGE_START)
+        self._main_panel.add(listener_panel)
+        self._main_panel.add(check_panel)
+        self._main_panel.add(clear_panel)
 
     def getTabCaption(self):
         return "Support Copy Request TSV"
@@ -39,8 +60,21 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         return self._main_panel
 
     def actionPerformed(self, event):
-        if event.getSource() is self._btn1:
-            self._btn1.text = str(int(self._btn1.text) + 1)
+        if event.getSource() is self._start_listener_btn:
+            self._start_listener_btn.setEnabled(False)
+            self._stop_listener_btn.setEnabled(True)
+            self._callbacks.registerProxyListener(self)
+            
+        elif event.getSource() is self._stop_listener_btn:
+            self._start_listener_btn.setEnabled(True)
+            self._stop_listener_btn.setEnabled(False)
+            self._callbacks.removeProxyListener(self)
+
+        elif event.getSource() is self._check_btn:
+            pass
+
+        elif event.getSource() is self._clear_btn:
+            pass
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -48,7 +82,6 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self._stdout    = PrintWriter(callbacks.getStdout(), True) #self._stdout.println()
 
         callbacks.setExtensionName(self.extentionName)
-        callbacks.registerProxyListener(self)
         callbacks.addSuiteTab(self)
 
     def extensionLoaded(self):
