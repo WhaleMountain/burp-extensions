@@ -18,7 +18,6 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), parameters: getParameters()}}
         self.histRequestRefKey    = "ref"
         self.histRequestParamKey  = "parameters"
-        #self.extensionLoaded()
         # create panels
         self._main_panel        = JPanel()
         listener_panel    = JPanel()
@@ -38,13 +37,15 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self._stop_listener_btn.setEnabled(False)
         listener_panel.add(self._stop_listener_btn)
 
-        check_label = JLabel("Check All")
+        check_label = JLabel("日本語")
         self._check_btn = JButton("Check")
+        self._check_btn.addActionListener(self)
         check_panel.add(check_label)
         check_panel.add(self._check_btn)
 
         clear_label = JLabel("Clear All")
         self._clear_btn = JButton("Clear")
+        self._clear_btn.addActionListener(self)
         clear_panel.add(clear_label)
         clear_panel.add(self._clear_btn)
 
@@ -63,18 +64,28 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         if event.getSource() is self._start_listener_btn:
             self._start_listener_btn.setEnabled(False)
             self._stop_listener_btn.setEnabled(True)
+
+            self.proxyHistCounter = len(self._callbacks.getProxyHistory())
             self._callbacks.registerProxyListener(self)
             
         elif event.getSource() is self._stop_listener_btn:
             self._start_listener_btn.setEnabled(True)
             self._stop_listener_btn.setEnabled(False)
+
+            self.historyRequests.clear()
+            self.proxyHistCounter = 0
             self._callbacks.removeProxyListener(self)
 
         elif event.getSource() is self._check_btn:
-            pass
+            for idx, messageInfo in enumerate(self._callbacks.getProxyHistory()):
+                self.comparisonRequest(idx + 1, messageInfo)
 
         elif event.getSource() is self._clear_btn:
-            pass
+            self.historyRequests.clear()
+            self.proxyHistCounter = 0
+            for messageInfo in self._callbacks.getProxyHistory():
+                if messageInfo.getHighlight() == self.color and messageInfo.getComment() != "":
+                    self.clearHighlightAndComment(messageInfo)
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -83,31 +94,6 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
 
         callbacks.setExtensionName(self.extentionName)
         callbacks.addSuiteTab(self)
-
-    def extensionLoaded(self):
-        proxyHistory = self._callbacks.getProxyHistory()
-        self.proxyHistCounter = len(proxyHistory)
-        self._stdout.println('Start offset: {}'.format(self.proxyHistCounter))
-
-        for idx, messageInfo in enumerate(proxyHistory):
-            requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
-            url         = requestInfo.getUrl()
-            method      = requestInfo.getMethod()
-            params      = requestInfo.getParameters()
-            method_url  = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
-            # 対象スコープでない場合は無視
-            if not self._callbacks.isInScope(url):
-                continue
-
-            someRequestInfo = self.getSomeRequest(method_url)
-            # 未取得のリクエストならhistoryRequestsに保存する
-            if someRequestInfo == None:
-                self.historyRequests[method_url] = {self.histRequestRefKey: idx + 1, self.histRequestParamKey: params}
-                continue
-            
-            # どのリクエストがパラメータが多いか比較する
-            if len(someRequestInfo[self.histRequestParamKey]) < len(params):
-                self.historyRequests[method_url] = {self.histRequestRefKey: idx + 1, self.histRequestParamKey: params}
 
     def processProxyMessage(self, messageIsRequest, message):
         # リクエストのみ
@@ -152,4 +138,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
     def setHighlightAndComment(self, messageInfo, ref):
         messageInfo.setHighlight(self.color)
         messageInfo.setComment(self.comment.format(ref))
-            
+
+    def clearHighlightAndComment(self, messageInfo):
+        messageInfo.setHighlight(None)
+        messageInfo.setComment("")
