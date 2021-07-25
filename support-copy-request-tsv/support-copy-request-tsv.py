@@ -5,14 +5,18 @@ from burp import IBurpExtender
 from burp import IProxyListener
 from burp import IParameter
 from burp import IBurpExtenderCallbacks
+from burp import IContextMenuFactory
+from burp import IContextMenuInvocation
 from java.io import PrintWriter
-from javax.swing import JPanel, JButton, JLabel
+from javax.swing import JPanel, JButton, JLabel, JMenuItem
 from java.awt import GridLayout
 from java.awt.event import ActionListener
 
-class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
+class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
         self.extentionName        = "Support Copy Request TSV"
+        self.menuName1            = "Sup cprTSV (Check)"
+        self.menuName2            = "Sup cprTSV (Clear)"
         self.color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
         self.comment              = "#{} has equal or greater parameters"
         self.proxyHistCounter     = 0
@@ -98,6 +102,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self._stdout    = PrintWriter(callbacks.getStdout(), True) #self._stdout.println()
 
         callbacks.setExtensionName(self.extentionName)
+        callbacks.registerContextMenuFactory(self)
         callbacks.addSuiteTab(self)
 
     def processProxyMessage(self, messageIsRequest, message):
@@ -108,6 +113,25 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self.proxyHistCounter += 1
         messageInfo = message.getMessageInfo()
         self.comparisonRequest(self.proxyHistCounter, messageInfo)
+
+    def createMenuItems(self, invocation):
+        menu = []
+        menu.append(JMenuItem(self.menuName1, actionPerformed=lambda x, inv=invocation: self.menu_action_check(inv)))
+        menu.append(JMenuItem(self.menuName2, actionPerformed=lambda x, inv=invocation: self.menu_action_clear(inv)))
+        return menu
+
+    # 選択されたリクエストの比較を行う
+    def menu_action_check(self, inv):
+        self.historyRequests.clear()
+        self.proxyHistCounter = 0
+        for idx, messageInfo in enumerate(inv.getSelectedMessages()):
+            self.comparisonRequest(idx + 1, messageInfo)
+    
+    # 選択されたリクエストのhighlightとCommentを削除する
+    def menu_action_clear(self, inv):
+        for messageInfo in inv.getSelectedMessages():
+            if messageInfo.getHighlight() == self.color and messageInfo.getComment() != "":
+                self.clearHighlightAndComment(messageInfo)    
 
     # リクエストの比較を行う
     def comparisonRequest(self, messageRef, messageInfo):
@@ -140,10 +164,12 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         except KeyError:
             return None
 
+    # highlightとCommentをセットする
     def setHighlightAndComment(self, messageInfo, ref):
         messageInfo.setHighlight(self.color)
         messageInfo.setComment(self.comment.format(ref))
 
+    # highlightとCommentを削除する
     def clearHighlightAndComment(self, messageInfo):
         messageInfo.setHighlight(None)
         messageInfo.setComment("")
