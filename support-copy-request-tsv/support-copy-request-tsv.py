@@ -41,7 +41,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self._start_listener_btn.addActionListener(self)
         listener_panel.add(self._start_listener_btn)
 
-        self._stop_listener_btn = JButton("Stop")
+        self._stop_listener_btn = JButton("Stop and Reset")
         self._stop_listener_btn.addActionListener(self)
         self._stop_listener_btn.setEnabled(False)
         listener_panel.add(self._stop_listener_btn)
