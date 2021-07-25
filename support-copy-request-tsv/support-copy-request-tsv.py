@@ -7,6 +7,7 @@ from burp import IParameter
 from burp import IBurpExtenderCallbacks
 from java.io import PrintWriter
 from javax.swing import JPanel, JButton, JLabel
+from java.awt import GridLayout
 from java.awt.event import ActionListener
 
 class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
@@ -19,10 +20,14 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self.histRequestRefKey    = "ref"
         self.histRequestParamKey  = "parameters"
         # create panels
-        self._main_panel        = JPanel()
+        self._main_panel  = JPanel()
+        self._main_panel.setLayout(None)
         listener_panel    = JPanel()
+        listener_panel.setBounds(5, 50, 300, 50)
         check_panel       = JPanel()
+        check_panel.setBounds(9, 100, 300, 50)
         clear_panel       = JPanel()
+        clear_panel.setBounds(16, 150, 300, 50)
 
         # create buttons
         listener_label = JLabel("ProxyListener")
@@ -37,13 +42,13 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener):
         self._stop_listener_btn.setEnabled(False)
         listener_panel.add(self._stop_listener_btn)
 
-        check_label = JLabel("日本語")
+        check_label = JLabel("Check all Proxy HTTP history")
         self._check_btn = JButton("Check")
         self._check_btn.addActionListener(self)
         check_panel.add(check_label)
         check_panel.add(self._check_btn)
 
-        clear_label = JLabel("Clear All")
+        clear_label = JLabel("Clear all highlight and comment")
         self._clear_btn = JButton("Clear")
         self._clear_btn.addActionListener(self)
         clear_panel.add(clear_label)
