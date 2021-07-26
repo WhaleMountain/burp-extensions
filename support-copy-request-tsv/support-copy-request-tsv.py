@@ -25,6 +25,8 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), parameters: getParameters()}}
         self.histRequestRefKey    = "ref"
         self.histRequestParamKey  = "parameters"
+        self.ignoreUrlList        = []
+
         # create panels
         self._main_panel    = JPanel()
         self._main_panel.setLayout(None)
@@ -153,20 +155,29 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         elif event.getSource() is self._ignore_add_btn:
             select_method = self._ignore_methods[self._ignore_dropdown.selectedIndex]
             url           = self._ignore_text.getText()
-            if url == "":
+            method_url    = '{}{}'.format(select_method, url)
+
+            # URLが空またはすでに追加済みなら追加しない。
+            if url == "" or method_url in self.ignoreUrlList:
                 return
+
             self._ignore_text.setText("")
             self._ignore_table_model.addRow([select_method, url])
+            self.ignoreUrlList.append(method_url)
 
         elif event.getSource() is self._ignore_remove_btn:
-            rowNo = self._ignore_table.getSelectedRow()
+            rowNo   = self._ignore_table.getSelectedRow()
+            method  = self._ignore_table_model.getValueAt(rowNo, 0)
+            url     = self._ignore_table_model.getValueAt(rowNo, 1)
             if rowNo >= 0: # 何も選択されていない時 -1 になるため
                 self._ignore_table_model.removeRow(rowNo)
+            self.ignoreUrlList.remove('{}{}'.format(method, url))
         
         elif event.getSource() is self._ignore_remove_all_btn:
             for rowNo in xrange(self._ignore_table.getRowCount()):
                 self._ignore_table_model.removeRow(0)
-    
+            del self.ignoreUrlList[:] # clear がつかなかったので del を使う
+
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
         self._helpers   = callbacks.getHelpers()
@@ -215,6 +226,10 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         if not self._callbacks.isInScope(url):
             return
 
+        # 無視リストに記載があれば無視
+        if self.isIgnoreList(method_url):
+            return
+
         someRequestInfo = self.getSomeRequest(method_url)
         # 未取得のリクエストならhistoryRequestsに保存する
         if someRequestInfo == None:
@@ -227,6 +242,10 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestParamKey: params}
         else:
             self.setHighlightAndComment(messageInfo, someRequestInfo[self.histRequestRefKey])
+
+    # 無視リストに存在するか 存在する -> True, 存在しない -> False
+    def isIgnoreList(self, method_url):
+        return method_url in self.ignoreUrlList
 
     # historyRequestsから値を取得する
     def getSomeRequest(self, key):
