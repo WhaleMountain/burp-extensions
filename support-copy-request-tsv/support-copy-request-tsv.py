@@ -8,8 +8,10 @@ from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
 from burp import IContextMenuInvocation
 from java.io import PrintWriter
-from javax.swing import JPanel, JButton, JLabel, JMenuItem, JComboBox, JTable
-from java.awt import GridLayout
+from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField
+from javax.swing.table import TableModel
+from javax.swing.table import DefaultTableModel
+from java.awt import GridLayout, Dimension
 from java.awt.event import ActionListener
 
 class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContextMenuFactory, IContextMenuInvocation):
@@ -24,16 +26,22 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.histRequestRefKey    = "ref"
         self.histRequestParamKey  = "parameters"
         # create panels
-        self._main_panel  = JPanel()
+        self._main_panel    = JPanel()
         self._main_panel.setLayout(None)
-        listener_panel    = JPanel()
+        listener_panel      = JPanel()
         listener_panel.setBounds(28, 50, 300, 50)
-        check_panel       = JPanel()
+        check_panel         = JPanel()
         check_panel.setBounds(9, 100, 300, 50)
-        clear_panel       = JPanel()
+        clear_panel         = JPanel()
         clear_panel.setBounds(16, 150, 300, 50)
-        highlight_panel   = JPanel()
+        highlight_panel     = JPanel()
         highlight_panel.setBounds(16, 200, 300, 50)
+        ignore_add_panel        = JPanel()
+        ignore_add_panel.setBounds(-60, 250, 700, 50)
+        ignore_table_btn_panel = JPanel()
+        ignore_table_btn_panel.setBounds(300, 300, 300, 50)
+        ignore_table_panel  = JScrollPane()
+        ignore_table_panel.setBounds(40, 350, 500, 300)
 
         # create buttons
         listener_label = JLabel("ProxyListener")
@@ -69,11 +77,38 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         highlight_panel.add(self._highlight_dropdown)
         highlight_panel.add(self._highlight_set_btn)
 
+        ignore_label = JLabel("Ignore to URLs")
+        self._ignore_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE", "LINK", "UNLINK"]
+        self._ignore_dropdown = JComboBox(self._ignore_methods)
+        self._ignore_text = JTextField(20)
+        self._ignore_add_btn = JButton("Add")
+        self._ignore_add_btn.addActionListener(self)
+        ignore_add_panel.add(ignore_label)
+        ignore_add_panel.add(self._ignore_dropdown)
+        ignore_add_panel.add(self._ignore_text)
+        ignore_add_panel.add(self._ignore_add_btn)
+
+        self._ignore_table_model = DefaultTableModel([], ["Method", "URL"])
+        self._ignore_table = JTable(self._ignore_table_model)
+        ignore_table_panel.add(self._ignore_table)
+        ignore_table_panel.setPreferredSize(Dimension(300,100))
+        ignore_table_panel.getViewport().setView((self._ignore_table))
+
+        self._ignore_remove_btn = JButton("Remove")
+        self._ignore_remove_all_btn = JButton("Remove All")
+        self._ignore_remove_btn.addActionListener(self)
+        self._ignore_remove_all_btn.addActionListener(self)
+        ignore_table_btn_panel.add(self._ignore_remove_btn)
+        ignore_table_btn_panel.add(self._ignore_remove_all_btn)
+
         # add panels to the main_panel
         self._main_panel.add(listener_panel)
         self._main_panel.add(check_panel)
         self._main_panel.add(clear_panel)
         self._main_panel.add(highlight_panel)
+        self._main_panel.add(ignore_add_panel)
+        self._main_panel.add(ignore_table_btn_panel)
+        self._main_panel.add(ignore_table_panel)
 
     def getTabCaption(self):
         return "Support Copy Request TSV"
@@ -114,6 +149,23 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
                 self.color = None
             else:
                 self.color = select_color
+
+        elif event.getSource() is self._ignore_add_btn:
+            select_method = self._ignore_methods[self._ignore_dropdown.selectedIndex]
+            url           = self._ignore_text.getText()
+            if url == "":
+                return
+            self._ignore_text.setText("")
+            self._ignore_table_model.addRow([select_method, url])
+
+        elif event.getSource() is self._ignore_remove_btn:
+            rowNo = self._ignore_table.getSelectedRow()
+            if rowNo >= 0: # 何も選択されていない時 -1 になるため
+                self._ignore_table_model.removeRow(rowNo)
+        
+        elif event.getSource() is self._ignore_remove_all_btn:
+            for rowNo in xrange(self._ignore_table.getRowCount()):
+                self._ignore_table_model.removeRow(0)
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
