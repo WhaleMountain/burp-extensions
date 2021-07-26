@@ -8,7 +8,7 @@ from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
 from burp import IContextMenuInvocation
 from java.io import PrintWriter
-from javax.swing import JPanel, JButton, JLabel, JMenuItem
+from javax.swing import JPanel, JButton, JLabel, JMenuItem, JComboBox, JTable
 from java.awt import GridLayout
 from java.awt.event import ActionListener
 
@@ -27,11 +27,13 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self._main_panel  = JPanel()
         self._main_panel.setLayout(None)
         listener_panel    = JPanel()
-        listener_panel.setBounds(5, 50, 300, 50)
+        listener_panel.setBounds(28, 50, 300, 50)
         check_panel       = JPanel()
         check_panel.setBounds(9, 100, 300, 50)
         clear_panel       = JPanel()
         clear_panel.setBounds(16, 150, 300, 50)
+        highlight_panel   = JPanel()
+        highlight_panel.setBounds(16, 200, 300, 50)
 
         # create buttons
         listener_label = JLabel("ProxyListener")
@@ -58,10 +60,20 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         clear_panel.add(clear_label)
         clear_panel.add(self._clear_btn)
 
+        highlight_label = JLabel("Highlight Color")
+        self._highlight_colors = ["gray", "white", "red", "orange", "yellow", "green", "cyan", "blue", "pink", "magenta"]
+        self._highlight_dropdown = JComboBox(self._highlight_colors)
+        self._highlight_set_btn = JButton("Set")
+        self._highlight_set_btn.addActionListener(self)
+        highlight_panel.add(highlight_label)
+        highlight_panel.add(self._highlight_dropdown)
+        highlight_panel.add(self._highlight_set_btn)
+
         # add panels to the main_panel
         self._main_panel.add(listener_panel)
         self._main_panel.add(check_panel)
         self._main_panel.add(clear_panel)
+        self._main_panel.add(highlight_panel)
 
     def getTabCaption(self):
         return "Support Copy Request TSV"
@@ -95,6 +107,13 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             for messageInfo in self._callbacks.getProxyHistory():
                 if messageInfo.getHighlight() == self.color and messageInfo.getComment() != "":
                     self.clearHighlightAndComment(messageInfo)
+
+        elif event.getSource() is self._highlight_set_btn:
+            select_color = self._highlight_colors[self._highlight_dropdown.selectedIndex]
+            if select_color == "white":
+                self.color = None
+            else:
+                self.color = select_color
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
