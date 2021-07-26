@@ -8,11 +8,12 @@ from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
 from burp import IContextMenuInvocation
 from java.io import PrintWriter
-from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField
+from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField, JFileChooser
 from javax.swing.table import TableModel
 from javax.swing.table import DefaultTableModel
-from java.awt import GridLayout, Dimension
+from java.awt import GridLayout, Dimension, Color
 from java.awt.event import ActionListener
+import json
 
 class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
@@ -41,7 +42,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         ignore_add_panel        = JPanel()
         ignore_add_panel.setBounds(-60, 250, 700, 50)
         ignore_table_btn_panel = JPanel()
-        ignore_table_btn_panel.setBounds(300, 300, 300, 50)
+        ignore_table_btn_panel.setBounds(173, 300, 400, 50)
         ignore_table_panel  = JScrollPane()
         ignore_table_panel.setBounds(40, 350, 500, 300)
 
@@ -90,18 +91,27 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         ignore_add_panel.add(self._ignore_text)
         ignore_add_panel.add(self._ignore_add_btn)
 
-        self._ignore_table_model = DefaultTableModel([], ["Method", "URL"])
+        self._ignore_table_model = IgnoreTable([], ["Method", "URL"])
         self._ignore_table = JTable(self._ignore_table_model)
         ignore_table_panel.add(self._ignore_table)
         ignore_table_panel.setPreferredSize(Dimension(300,100))
         ignore_table_panel.getViewport().setView((self._ignore_table))
 
+        self._ignore_list_export_btn = JButton("Export")
+        self._ignore_list_import_btn = JButton("Import")
         self._ignore_remove_btn = JButton("Remove")
         self._ignore_remove_all_btn = JButton("Remove All")
+        self._ignore_list_export_btn.addActionListener(self)
+        self._ignore_list_import_btn.addActionListener(self)
         self._ignore_remove_btn.addActionListener(self)
         self._ignore_remove_all_btn.addActionListener(self)
+        ignore_table_btn_panel.add(self._ignore_list_export_btn)
+        ignore_table_btn_panel.add(self._ignore_list_import_btn)
         ignore_table_btn_panel.add(self._ignore_remove_btn)
         ignore_table_btn_panel.add(self._ignore_remove_all_btn)
+
+        self._ignore_file_chooser = JFileChooser()
+        self._ignore_file_chooser.setFileSelectionMode(JFileChooser.FILES_ONLY)
 
         # add panels to the main_panel
         self._main_panel.add(listener_panel)
@@ -177,6 +187,31 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             for rowNo in xrange(self._ignore_table.getRowCount()):
                 self._ignore_table_model.removeRow(0)
             del self.ignoreUrlList[:] # clear がつかなかったので del を使う
+
+        elif event.getSource() is self._ignore_list_export_btn:
+            self._ignore_file_chooser.showSaveDialog(event.getSource())
+            export_file_path = self._ignore_file_chooser.getSelectedFile().getAbsolutePath()
+            export_data = []
+            for rowNo in xrange(self._ignore_table_model.getRowCount()):
+                data = {
+                    "method": self._ignore_table_model.getValueAt(rowNo, 0),
+                    "url": self._ignore_table_model.getValueAt(rowNo, 1)
+                }
+                export_data.append(data)
+            with open(export_file_path, 'w') as f:
+                f.write(json.dumps(export_data))
+        
+        elif event.getSource() is self._ignore_list_import_btn:
+            self._ignore_file_chooser.showOpenDialog(event.getSource())
+            import_file_path = self._ignore_file_chooser.getSelectedFile().getAbsolutePath()
+            with open(import_file_path, 'r') as f:
+                import_data = json.loads(f.read())
+            for data in import_data:
+                method      = data["method"]
+                url         = data["url"]
+                method_url  = '{}{}'.format(method, url)
+                self._ignore_table_model.addRow([method, url])
+                self.ignoreUrlList.append(method_url)
 
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -263,3 +298,10 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
     def clearHighlightAndComment(self, messageInfo):
         messageInfo.setHighlight(None)
         messageInfo.setComment("")
+
+class IgnoreTable(DefaultTableModel):
+    def __init__(self, data, headings):
+        DefaultTableModel.__init__(self, data, headings)
+
+    def isCellEditable(self, row, column):
+        return False
