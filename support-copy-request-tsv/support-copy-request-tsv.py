@@ -11,9 +11,10 @@ from java.io import PrintWriter
 from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField, JFileChooser
 from javax.swing.table import TableModel
 from javax.swing.table import DefaultTableModel
-from java.awt import GridLayout, Dimension, Color
+from java.awt import Dimension, Color
 from java.awt.event import ActionListener
 import json
+import re
 
 class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
@@ -27,6 +28,10 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.histRequestRefKey    = "ref"
         self.histRequestParamKey  = "parameters"
         self.ignoreUrlList        = []
+
+        # URLの正規表現
+        pattern = "https?://"
+        self.url_regex = re.compile(pattern)
 
         # create panels
         self._main_panel    = JPanel()
@@ -167,8 +172,8 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             url           = self._ignore_text.getText()
             method_url    = '{}{}'.format(select_method, url)
 
-            # URLが空またはすでに追加済みなら追加しない。
-            if url == "" or method_url in self.ignoreUrlList:
+            # URL形式じゃない、またはすでに追加済みなら追加しない。
+            if self.url_regex.match(url) == None or method_url in self.ignoreUrlList:
                 return
 
             self._ignore_text.setText("")
@@ -207,6 +212,9 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             with open(import_file_path, 'r') as f:
                 import_data = json.loads(f.read())
             for data in import_data:
+                # URL形式じゃない場合は無視
+                if self.url_regex.match(data["url"]) == None:
+                    continue
                 method      = data["method"]
                 url         = data["url"]
                 method_url  = '{}{}'.format(method, url)
