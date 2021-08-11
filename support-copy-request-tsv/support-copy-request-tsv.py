@@ -22,10 +22,11 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.menuName1            = "Sup cprTSV (Check)"
         self.menuName2            = "Sup cprTSV (Clear)"
         self.color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-        self.comment              = "#{} has equal or greater parameters"
+        self.comment              = "#{} has equal or better parameters or headers"
         self.proxyHistCounter     = 0
-        self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), parameters: getParameters()}}
+        self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), headers: getHeaders(), parameters: getParameters()}}
         self.histRequestRefKey    = "ref"
+        self.histRequestHeaderKey = "headers"
         self.histRequestParamKey  = "parameters"
         self.ignoreUrlList        = []
 
@@ -263,11 +264,12 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
         url         = requestInfo.getUrl()
         method      = requestInfo.getMethod()
+        headers     = requestInfo.getHeaders()
         params      = requestInfo.getParameters()
         method_url  = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
         # 対象スコープでない場合は無視
         if not self._callbacks.isInScope(url):
-            return
+            return 
 
         # 無視リストに記載があれば無視
         if self.isIgnoreList(method_url):
@@ -276,13 +278,13 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         someRequestInfo = self.getSomeRequest(method_url)
         # 未取得のリクエストならhistoryRequestsに保存する
         if someRequestInfo == None:
-            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestParamKey: params}
+            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
             return
         
-        # どのリクエストがパラメータが多いか比較する
-        if len(someRequestInfo[self.histRequestParamKey]) < len(params):
+        # どのリクエストがパラメータ、もしくはヘッダーが多いか比較する
+        if len(someRequestInfo[self.histRequestParamKey]) < len(params) or len(someRequestInfo[self.histRequestHeaderKey]) < len(headers):
             self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
-            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestParamKey: params}
+            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
         else:
             self.setHighlightAndComment(messageInfo, someRequestInfo[self.histRequestRefKey])
 
