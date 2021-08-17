@@ -281,10 +281,17 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
             return
         
-        # どのリクエストがパラメータ、もしくはヘッダーが多いか比較する
-        if len(someRequestInfo[self.histRequestParamKey]) < len(params) or len(someRequestInfo[self.histRequestHeaderKey]) < len(headers):
+        # パラメータ数の比較
+        if len(someRequestInfo[self.histRequestParamKey]) < len(params):
             self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
             self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
+
+        # パラメータ数は同数だが、ヘッダー数が多い場合
+        elif len(someRequestInfo[self.histRequestParamKey]) == len(params) and len(someRequestInfo[self.histRequestHeaderKey]) < len(headers):
+            self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
+            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
+
+        # パラメータ数、ヘッダー数ともに取得済みより劣る
         else:
             self.setHighlightAndComment(messageInfo, someRequestInfo[self.histRequestRefKey])
 
