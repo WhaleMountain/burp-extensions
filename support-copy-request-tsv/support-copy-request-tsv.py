@@ -170,17 +170,10 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
                 self.color = select_color
 
         elif event.getSource() is self._ignore_add_btn:
-            select_method = self._ignore_methods[self._ignore_dropdown.selectedIndex]
-            url           = self._ignore_text.getText()
-            method_url    = '{}{}'.format(select_method, url)
-
-            # URL形式じゃない、またはすでに追加済みなら追加しない。
-            if self.url_regex.match(url) == None or method_url in self.ignoreUrlList:
-                return
-
-            self._ignore_text.setText("")
-            self._ignore_table_model.addRow([select_method, url])
-            self.ignoreUrlList.append(method_url)
+            method = self._ignore_methods[self._ignore_dropdown.selectedIndex]
+            url    = self._ignore_text.getText()
+            if self.addIgnoreUrlList(method, url):
+                self._ignore_text.setText("")
 
         elif event.getSource() is self._ignore_remove_btn:
             rowNo   = self._ignore_table.getSelectedRow()
@@ -214,14 +207,9 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             with open(import_file_path, 'r') as f:
                 import_data = json.loads(f.read())
             for data in import_data:
-                # URL形式じゃない場合は無視
-                if self.url_regex.match(data["url"]) == None:
-                    continue
                 method      = data["method"]
                 url         = data["url"]
-                method_url  = '{}{}'.format(method, url)
-                self._ignore_table_model.addRow([method, url])
-                self.ignoreUrlList.append(method_url)
+                self.addIgnoreUrlList(method, url)
 
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -267,15 +255,19 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
             jurl        = requestInfo.getUrl()
             url         = '{}://{}{}'.format(jurl.getProtocol(), jurl.getHost(), jurl.getPath())
-            method      = requestInfo.getMethod()
-            method_url  = '{}{}'.format(method, url)
+            self.addIgnoreUrlList(requestInfo.getMethod(), url)
 
-            # URL形式じゃない、またはすでに追加済みなら追加しない。
-            if self.url_regex.match(url) == None or method_url in self.ignoreUrlList:
-                continue
-
-            self._ignore_table_model.addRow([method, url])
-            self.ignoreUrlList.append(method_url)
+    # Ignoreリストに追加する
+    def addIgnoreUrlList(self, method, url):
+        # URL形式じゃない、またはすでに追加済みなら追加しない。
+        method_url = '{}{}'.format(method, url)
+        if self.url_regex.match(url) == None or method_url in self.ignoreUrlList:
+            return False
+        
+        # 未登録なら追加する
+        self._ignore_table_model.addRow([method, url])
+        self.ignoreUrlList.append(method_url)
+        return True
 
     # リクエストの比較を行う
     def comparisonRequest(self, messageRef, messageInfo):
