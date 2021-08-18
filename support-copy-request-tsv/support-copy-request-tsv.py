@@ -21,6 +21,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.extentionName        = "Support Copy Request TSV"
         self.menuName1            = "Sup cprTSV (Check)"
         self.menuName2            = "Sup cprTSV (Clear)"
+        self.menuName3            = "Sup cprTSV (Ignore)"
         self.color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
         self.comment              = "#{} has equal or better parameters or headers"
         self.proxyHistCounter     = 0
@@ -87,7 +88,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         highlight_panel.add(self._highlight_set_btn)
 
         ignore_label = JLabel("Ignore to URLs")
-        self._ignore_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE", "LINK", "UNLINK"]
+        self._ignore_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "TRACE", "CONNECT"]
         self._ignore_dropdown = JComboBox(self._ignore_methods)
         self._ignore_text = JTextField(20)
         self._ignore_add_btn = JButton("Add")
@@ -244,6 +245,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         menu = []
         menu.append(JMenuItem(self.menuName1, actionPerformed=lambda x, inv=invocation: self.menu_action_check(inv)))
         menu.append(JMenuItem(self.menuName2, actionPerformed=lambda x, inv=invocation: self.menu_action_clear(inv)))
+        menu.append(JMenuItem(self.menuName3, actionPerformed=lambda x, inv=invocation: self.menu_action_ignore(inv)))
         return menu
 
     # 選択されたリクエストの比較を行う
@@ -258,6 +260,22 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         for messageInfo in inv.getSelectedMessages():
             if messageInfo.getHighlight() == self.color and messageInfo.getComment() != "":
                 self.clearHighlightAndComment(messageInfo)    
+
+    # 選択されたリクエストをIgnoreに追加する
+    def menu_action_ignore(self, inv):
+        for messageInfo in inv.getSelectedMessages():
+            requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
+            jurl        = requestInfo.getUrl()
+            url         = '{}://{}{}'.format(jurl.getProtocol(), jurl.getHost(), jurl.getPath())
+            method      = requestInfo.getMethod()
+            method_url  = '{}{}'.format(method, url)
+
+            # URL形式じゃない、またはすでに追加済みなら追加しない。
+            if self.url_regex.match(url) == None or method_url in self.ignoreUrlList:
+                continue
+
+            self._ignore_table_model.addRow([method, url])
+            self.ignoreUrlList.append(method_url)
 
     # リクエストの比較を行う
     def comparisonRequest(self, messageRef, messageInfo):
