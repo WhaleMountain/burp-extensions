@@ -257,18 +257,6 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             url         = '{}://{}{}'.format(jurl.getProtocol(), jurl.getHost(), jurl.getPath())
             self.addIgnoreUrlList(requestInfo.getMethod(), url)
 
-    # Ignoreリストに追加する
-    def addIgnoreUrlList(self, method, url):
-        # URL形式じゃない、またはすでに追加済みなら追加しない。
-        method_url = '{}{}'.format(method, url)
-        if self.url_regex.match(url) == None or method_url in self.ignoreUrlList:
-            return False
-        
-        # 未登録なら追加する
-        self._ignore_table_model.addRow([method, url])
-        self.ignoreUrlList.append(method_url)
-        return True
-
     # リクエストの比較を行う
     def comparisonRequest(self, messageRef, messageInfo):
         requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
@@ -308,6 +296,18 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
     # 無視リストに存在するか 存在する -> True, 存在しない -> False
     def isIgnoreList(self, method_url):
         return method_url in self.ignoreUrlList
+
+    # Ignoreリストに追加する
+    def addIgnoreUrlList(self, method, url):
+        # URL形式じゃない、またはすでに追加済みなら追加しない。
+        method_url = '{}{}'.format(method, url)
+        if self.url_regex.match(url) == None or self.isIgnoreList(method_url):
+            return False
+        
+        # 未登録なら追加する
+        self._ignore_table_model.addRow([method, url])
+        self.ignoreUrlList.append(method_url)
+        return True
 
     # historyRequestsから値を取得する
     def getSomeRequest(self, key):
