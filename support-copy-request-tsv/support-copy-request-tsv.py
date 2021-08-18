@@ -8,7 +8,8 @@ from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
 from burp import IContextMenuInvocation
 from java.io import PrintWriter
-from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField, JFileChooser
+from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField, JFileChooser, JOptionPane
+from javax.swing.filechooser import FileNameExtensionFilter
 from javax.swing.table import TableModel
 from javax.swing.table import DefaultTableModel
 from java.awt import Dimension, Color
@@ -29,7 +30,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.histRequestRefKey    = "ref"
         self.histRequestHeaderKey = "headers"
         self.histRequestParamKey  = "parameters"
-        self.ignoreUrlList        = []
+        self.ignoreUrlList        = set()
 
         # URLの正規表現
         pattern = "https?://"
@@ -119,6 +120,9 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
 
         self._ignore_file_chooser = JFileChooser()
         self._ignore_file_chooser.setFileSelectionMode(JFileChooser.FILES_ONLY)
+        self._ignore_file_chooser.setAcceptAllFileFilterUsed(False)
+        extFilter = FileNameExtensionFilter("JSON files (*.json)", ["json"])
+        self._ignore_file_chooser.addChoosableFileFilter(extFilter)
 
         # add panels to the main_panel
         self._main_panel.add(listener_panel)
@@ -186,11 +190,22 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         elif event.getSource() is self._ignore_remove_all_btn:
             for rowNo in xrange(self._ignore_table.getRowCount()):
                 self._ignore_table_model.removeRow(0)
-            del self.ignoreUrlList[:] # clear がつかなかったので del を使う
+            self.ignoreUrlList.clear()
 
         elif event.getSource() is self._ignore_list_export_btn:
             self._ignore_file_chooser.showSaveDialog(event.getSource())
             export_file_path = self._ignore_file_chooser.getSelectedFile().getAbsolutePath()
+            file_ext = self._ignore_file_chooser.getSelectedFile().getName().split(".")[-1]
+            if file_ext.lower() != "json":
+                export_file_path = '{}.json'.format(export_file_path)
+
+            # 上書き保存の確認
+            if self._ignore_file_chooser.getSelectedFile().exists():
+                message = "{} already exists.\nDo you want to replace it?".format(export_file_path)
+                ans = JOptionPane.showConfirmDialog(None, message, "Save As", JOptionPane.YES_NO_OPTION)
+                if (ans == JOptionPane.NO_OPTION):
+                    return
+            
             export_data = []
             for rowNo in xrange(self._ignore_table_model.getRowCount()):
                 data = {
@@ -306,7 +321,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         
         # 未登録なら追加する
         self._ignore_table_model.addRow([method, url])
-        self.ignoreUrlList.append(method_url)
+        self.ignoreUrlList.add(method_url)
         return True
 
     # historyRequestsから値を取得する

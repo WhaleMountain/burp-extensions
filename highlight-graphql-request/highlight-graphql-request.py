@@ -11,7 +11,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
         self.extentionName       = "Highlight GraphQL Request"
         self.color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
         self.endpoint            = "/graphql"
-        self.graphqlRequests     = []   
+        self.graphqlRequests     = set()
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -55,7 +55,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
                 query = param.getValue()
 
         if query != "" and query not in self.graphqlRequests:
-            self.graphqlRequests.append(query)
+            self.graphqlRequests.add(query)
             return True
         
         return False
