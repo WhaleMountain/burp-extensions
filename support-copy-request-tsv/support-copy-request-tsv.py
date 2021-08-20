@@ -254,7 +254,6 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
     # 選択されたリクエストの比較を行う
     def menu_action_check(self, inv):
         self.historyRequests.clear()
-        self.proxyHistCounter = 0
         for idx, messageInfo in enumerate(inv.getSelectedMessages()):
             self.comparisonRequest(idx + 1, messageInfo)
     
