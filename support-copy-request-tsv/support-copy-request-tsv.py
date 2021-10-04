@@ -24,7 +24,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.menuName2            = "Sup cprTSV (Clear)"
         self.menuName3            = "Sup cprTSV (Ignore)"
         self.color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-        self.comment              = "#{} has equal or better parameters or headers"
+        self.comment              = "#{} has equal or better parameters or headers "
         self.proxyHistCounter     = 0
         self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), headers: getHeaders(), parameters: getParameters()}}
         self.histRequestRefKey    = "ref"
@@ -33,8 +33,12 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.ignoreUrlList        = set()
 
         # URLの正規表現
-        pattern = "https?://"
-        self.url_regex = re.compile(pattern)
+        url_pattern = "https?://"
+        self.url_regex = re.compile(url_pattern)
+
+        # コメント削除用の正規表現
+        comment_pattern = self.comment.format("\d+")
+        self.comment_regex = re.compile(comment_pattern)
 
         # create panels
         self._main_panel    = JPanel()
@@ -163,7 +167,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             self.historyRequests.clear()
             self.proxyHistCounter = 0
             for messageInfo in self._callbacks.getProxyHistory():
-                if messageInfo.getHighlight() == self.color and messageInfo.getComment() != "":
+                if messageInfo.getHighlight() == self.color and self.comment_regex.match(messageInfo.getComment()) != None:
                     self.clearHighlightAndComment(messageInfo)
 
         elif event.getSource() is self._highlight_set_btn:
@@ -260,7 +264,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
     # 選択されたリクエストのhighlightとCommentを削除する
     def menu_action_clear(self, inv):
         for messageInfo in inv.getSelectedMessages():
-            if messageInfo.getHighlight() == self.color and messageInfo.getComment() != "":
+            if messageInfo.getHighlight() == self.color and self.comment_regex.match(messageInfo.getComment()) != None:
                 self.clearHighlightAndComment(messageInfo)    
 
     # 選択されたリクエストをIgnoreに追加する
@@ -333,12 +337,14 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
     # highlightとCommentをセットする
     def setHighlightAndComment(self, messageInfo, ref):
         messageInfo.setHighlight(self.color)
-        messageInfo.setComment(self.comment.format(ref))
+        set_comment = "{}{}".format(self.comment.format(ref), messageInfo.getComment())
+        messageInfo.setComment(set_comment)
 
     # highlightとCommentを削除する
     def clearHighlightAndComment(self, messageInfo):
         messageInfo.setHighlight(None)
-        messageInfo.setComment("")
+        clear_comment = self.comment_regex.sub("", messageInfo.getComment())
+        messageInfo.setComment(clear_comment)
 
 class IgnoreTable(DefaultTableModel):
     def __init__(self, data, headings):
