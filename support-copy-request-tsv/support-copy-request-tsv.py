@@ -344,7 +344,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
     def clearHighlightAndComment(self, messageInfo):
         messageInfo.setHighlight(None)
         clear_comment = self.comment_regex.sub("", messageInfo.getComment())
-        messageInfo.setComment(clear_comment)
+        messageInfo.setComment(clear_comment if clear_comment != None else "")
 
 class IgnoreTable(DefaultTableModel):
     def __init__(self, data, headings):
