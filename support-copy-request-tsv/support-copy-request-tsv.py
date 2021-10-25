@@ -232,9 +232,9 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self._helpers   = callbacks.getHelpers()
         self._stdout    = PrintWriter(callbacks.getStdout(), True) #self._stdout.println()
 
-        # ---- Warning 定数の気持ち〜 -----
+        # ---- 定数の気持ち〜 -----
         self.HISTORY_REFERENCE_OFFSET = len(callbacks.getProxyHistory())
-        # ------------------------------
+        # ----------------------
 
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerContextMenuFactory(self)
@@ -257,7 +257,6 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
 
     # 選択されたリクエストの比較を行う
     def menu_action_check(self, inv):
-        #self.historyRequests.clear()
         self.compInfos.clear()
         for idx, messageInfo in enumerate(inv.getSelectedMessages()):
             self.comparisonRequest(idx + 1, messageInfo)
@@ -296,7 +295,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             return
 
         compInfo = self.getCompInfo(method_url) # 比較するリクエストの取得
-        # 未取得のリクエストならhistoryRequestsに保存する
+        # 未取得のリクエストならcompInfosに保存する
         if compInfo == None:
             messageInfo.setComment(self.comment.format(messageRef, ""))
             self.compInfos[method_url] = {self.compReferenceKey: messageRef, self.compMessageKey: messageInfo}
