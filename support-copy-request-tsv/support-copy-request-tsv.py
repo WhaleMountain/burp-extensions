@@ -24,12 +24,11 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.menuName2            = "Sup cprTSV (Clear)"
         self.menuName3            = "Sup cprTSV (Ignore)"
         self.color                = "gray" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-        self.comment              = "#{} has equal or better parameters or headers "
-        self.proxyHistCounter     = 0
-        self.historyRequests      = {} # {Method+URL: {ref: getMessageReference(), headers: getHeaders(), parameters: getParameters()}}
-        self.histRequestRefKey    = "ref"
-        self.histRequestHeaderKey = "headers"
-        self.histRequestParamKey  = "parameters"
+        self.comment              = "No.{}, <= #{} "
+        self.compInfos            = {} # {Method+URL: {reference: getMessageReference(), messageInfo: getMessageInfo()}}
+        self.compReferenceKey     = "reference"
+        self.compMessageKey       = "messageInfo"
+
         self.ignoreUrlList        = set()
 
         # URLの正規表現
@@ -37,7 +36,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.url_regex = re.compile(url_pattern)
 
         # コメント削除用の正規表現
-        comment_pattern = self.comment.format("\d+")
+        comment_pattern = self.comment.format("\d+", "\d*")
         self.comment_regex = re.compile(comment_pattern)
 
         # create panels
@@ -147,16 +146,12 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         if event.getSource() is self._start_listener_btn:
             self._start_listener_btn.setEnabled(False)
             self._stop_listener_btn.setEnabled(True)
-
-            self.proxyHistCounter = len(self._callbacks.getProxyHistory())
             self._callbacks.registerProxyListener(self)
             
         elif event.getSource() is self._stop_listener_btn:
             self._start_listener_btn.setEnabled(True)
             self._stop_listener_btn.setEnabled(False)
-
-            self.historyRequests.clear()
-            self.proxyHistCounter = 0
+            self.compInfos.clear()
             self._callbacks.removeProxyListener(self)
 
         elif event.getSource() is self._check_btn:
@@ -164,11 +159,13 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
                 self.comparisonRequest(idx + 1, messageInfo)
 
         elif event.getSource() is self._clear_btn:
-            self.historyRequests.clear()
-            self.proxyHistCounter = 0
+            self.compInfos.clear()
             for messageInfo in self._callbacks.getProxyHistory():
-                if messageInfo.getHighlight() == self.color and self.comment_regex.match(messageInfo.getComment()) != None:
-                    self.clearHighlightAndComment(messageInfo)
+                try:
+                    if self.comment_regex.match(messageInfo.getComment()) != None:
+                        self.clearHighlightAndComment(messageInfo, messageInfo.getHighlight() == self.color)
+                except TypeError:
+                    continue
 
         elif event.getSource() is self._highlight_set_btn:
             select_color = self._highlight_colors[self._highlight_dropdown.selectedIndex]
@@ -235,6 +232,10 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self._helpers   = callbacks.getHelpers()
         self._stdout    = PrintWriter(callbacks.getStdout(), True) #self._stdout.println()
 
+        # ---- Warning 定数の気持ち〜 -----
+        self.HISTORY_REFERENCE_OFFSET = len(callbacks.getProxyHistory())
+        # ------------------------------
+
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerContextMenuFactory(self)
         callbacks.addSuiteTab(self)
@@ -244,9 +245,8 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         if not messageIsRequest:
             return
         
-        self.proxyHistCounter += 1
         messageInfo = message.getMessageInfo()
-        self.comparisonRequest(self.proxyHistCounter, messageInfo)
+        self.comparisonRequest(self.HISTORY_REFERENCE_OFFSET + message.getMessageReference() + 1, messageInfo)
 
     def createMenuItems(self, invocation):
         menu = []
@@ -257,15 +257,19 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
 
     # 選択されたリクエストの比較を行う
     def menu_action_check(self, inv):
-        self.historyRequests.clear()
+        #self.historyRequests.clear()
+        self.compInfos.clear()
         for idx, messageInfo in enumerate(inv.getSelectedMessages()):
             self.comparisonRequest(idx + 1, messageInfo)
     
     # 選択されたリクエストのhighlightとCommentを削除する
     def menu_action_clear(self, inv):
         for messageInfo in inv.getSelectedMessages():
-            if messageInfo.getHighlight() == self.color and self.comment_regex.match(messageInfo.getComment()) != None:
-                self.clearHighlightAndComment(messageInfo)    
+            try:
+                if self.comment_regex.match(messageInfo.getComment()) != None:
+                    self.clearHighlightAndComment(messageInfo, messageInfo.getHighlight() == self.color)
+            except TypeError:
+                continue   
 
     # 選択されたリクエストをIgnoreに追加する
     def menu_action_ignore(self, inv):
@@ -291,25 +295,33 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         if self.isIgnoreList(method_url):
             return
 
-        someRequestInfo = self.getSomeRequest(method_url)
+        compInfo = self.getCompInfo(method_url) # 比較するリクエストの取得
         # 未取得のリクエストならhistoryRequestsに保存する
-        if someRequestInfo == None:
-            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
+        if compInfo == None:
+            messageInfo.setComment(self.comment.format(messageRef, ""))
+            self.compInfos[method_url] = {self.compReferenceKey: messageRef, self.compMessageKey: messageInfo}
             return
+
+        compMessageInfo = compInfo[self.compMessageKey]
+        compRequestInfo = self._helpers.analyzeRequest(compMessageInfo.getHttpService(), compMessageInfo.getRequest())
+        compParams      = compRequestInfo.getParameters()
+        compHeaders     = compRequestInfo.getHeaders()
         
         # パラメータ数の比較
-        if len(someRequestInfo[self.histRequestParamKey]) < len(params):
-            self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
-            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
+        if len(compParams) < len(params):
+            self.setHighlightAndComment(compMessageInfo, compInfo[self.compReferenceKey], messageRef)
+            messageInfo.setComment(self.comment.format(messageRef, ""))
+            self.compInfos[method_url] = {self.compReferenceKey: messageRef, self.compMessageKey: messageInfo}
 
         # パラメータ数は同数だが、ヘッダー数が多い場合
-        elif len(someRequestInfo[self.histRequestParamKey]) == len(params) and len(someRequestInfo[self.histRequestHeaderKey]) < len(headers):
-            self.setHighlightAndComment(self._callbacks.getProxyHistory()[someRequestInfo[self.histRequestRefKey] - 1], messageRef)
-            self.historyRequests[method_url] = {self.histRequestRefKey: messageRef, self.histRequestHeaderKey: headers, self.histRequestParamKey: params}
+        elif len(compParams) == len(params) and len(compHeaders) < len(headers):
+            self.setHighlightAndComment(compMessageInfo, compInfo[self.compReferenceKey], messageRef)
+            messageInfo.setComment(self.comment.format(messageRef, ""))
+            self.compInfos[method_url] = {self.compReferenceKey: messageRef, self.compMessageKey: messageInfo}
 
         # パラメータ数、ヘッダー数ともに取得済みより劣る
         else:
-            self.setHighlightAndComment(messageInfo, someRequestInfo[self.histRequestRefKey])
+            self.setHighlightAndComment(messageInfo, messageRef, compInfo[self.compReferenceKey])
 
     # 無視リストに存在するか 存在する -> True, 存在しない -> False
     def isIgnoreList(self, method_url):
@@ -327,22 +339,22 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self.ignoreUrlList.add(method_url)
         return True
 
-    # historyRequestsから値を取得する
-    def getSomeRequest(self, key):
+    # compInfosから値を取得する
+    def getCompInfo(self, key):
         try:
-            return self.historyRequests[key]
+            return self.compInfos[key]
         except KeyError:
             return None
 
     # highlightとCommentをセットする
-    def setHighlightAndComment(self, messageInfo, ref):
+    def setHighlightAndComment(self, messageInfo, ref, compRef):
         messageInfo.setHighlight(self.color)
-        set_comment = "{}{}".format(self.comment.format(ref), messageInfo.getComment())
-        messageInfo.setComment(set_comment)
+        messageInfo.setComment(self.comment.format(ref, compRef))
 
     # highlightとCommentを削除する
-    def clearHighlightAndComment(self, messageInfo):
-        messageInfo.setHighlight(None)
+    def clearHighlightAndComment(self, messageInfo, isClearColor):
+        if isClearColor:
+            messageInfo.setHighlight(None)
         clear_comment = self.comment_regex.sub("", messageInfo.getComment())
         messageInfo.setComment(clear_comment if clear_comment != None else "")
 
