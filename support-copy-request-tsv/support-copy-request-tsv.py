@@ -7,7 +7,7 @@ from burp import IParameter
 from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
 from burp import IContextMenuInvocation
-from java.io import PrintWriter
+from java.io import PrintWriter, File
 from javax.swing import JPanel, JScrollPane, JButton, JLabel, JMenuItem, JComboBox, JTable, JTextField, JFileChooser, JOptionPane
 from javax.swing.filechooser import FileNameExtensionFilter
 from javax.swing.table import TableModel
@@ -20,6 +20,7 @@ import re
 class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
         self.extentionName        = "Support Copy Request TSV"
+        self.tabName              = "Support TSV"
         self.menuName1            = "Sup cprTSV (Check)"
         self.menuName2            = "Sup cprTSV (Clear)"
         self.menuName3            = "Sup cprTSV (Ignore)"
@@ -137,7 +138,7 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         self._main_panel.add(ignore_table_panel)
 
     def getTabCaption(self):
-        return "Support Copy Request TSV"
+        return self.tabName
 
     def getUiComponent(self):
         return self._main_panel
@@ -194,11 +195,14 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
             self.ignoreUrlList.clear()
 
         elif event.getSource() is self._ignore_list_export_btn:
-            self._ignore_file_chooser.showSaveDialog(event.getSource())
+            dialog_ans = self._ignore_file_chooser.showSaveDialog(event.getSource())
+            if dialog_ans == JFileChooser.CANCEL_OPTION:
+                return
             export_file_path = self._ignore_file_chooser.getSelectedFile().getAbsolutePath()
             file_ext = self._ignore_file_chooser.getSelectedFile().getName().split(".")[-1]
             if file_ext.lower() != "json":
                 export_file_path = '{}.json'.format(export_file_path)
+                self._ignore_file_chooser.setSelectedFile(File(export_file_path))
 
             # 上書き保存の確認
             if self._ignore_file_chooser.getSelectedFile().exists():
@@ -218,7 +222,9 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
                 f.write(json.dumps(export_data))
         
         elif event.getSource() is self._ignore_list_import_btn:
-            self._ignore_file_chooser.showOpenDialog(event.getSource())
+            dialog_ans = self._ignore_file_chooser.showOpenDialog(event.getSource())
+            if dialog_ans == JFileChooser.CANCEL_OPTION:
+                return
             import_file_path = self._ignore_file_chooser.getSelectedFile().getAbsolutePath()
             with open(import_file_path, 'r') as f:
                 import_data = json.loads(f.read())
