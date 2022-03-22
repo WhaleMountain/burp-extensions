@@ -13,12 +13,12 @@ from java.awt.datatransfer import Clipboard, StringSelection
 class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
         self.extentionName = "Support Crawl"
-        self.menuName = "Copy Request TSV (FULL)"
+        self.menuName = "Copy Request TSV (Full)"
         self.comp_color = "gray"
         self.copy_color = 'pink'
         self.comment = "Already copied"
         self.rdb = RequestDictDB()
-        self.rcmp = RequestComparison()
+        self.rcmp = RequestComparsion()
         self.cptsv = CopyToTsv()
 
     def	registerExtenderCallbacks(self, callbacks):
@@ -109,7 +109,7 @@ class CopyToTsv():
         selection = StringSelection(tsv)
         self.clipboard.setContents(selection, selection)
 
-class RequestComparison():
+class RequestComparsion():
     # ヘッダーの比較
     def comparsion_header(self, current_headers, headers):
         cheaders = {}
@@ -134,62 +134,6 @@ class RequestComparison():
             if current_cookie.getType() == IParameter.PARAM_COOKIE:
                 ccookies[current_cookie.getName()] = current_cookie.getValue()
         return ccookies == cookies 
-
-    # ヘッダー数の比較
-    # 現在リクエストヘッダーが多いと True
-    def comparison_number_header(self, current_headers, headers):
-        cheaders = {}
-        for current_header in current_headers:
-            ch = current_header.split(": ", 1)
-            if len(ch) == 2 and ch[0] != "Cookie":
-                cheaders[ch[0]] = ch[1]
-        return len(cheaders) > len(headers)
-    
-    # パラメータ数の比較
-    # 現在リクエストパラメータが多いと True
-    def comparison_number_parameter(self, current_parameters, parameters):
-        cparameters = {}
-        for current_parameter in current_parameters:
-            if current_parameter.getType() != IParameter.PARAM_COOKIE:
-                cparameters[current_parameter.getName()] = current_parameter.getValue()
-        return len(cparameters) > len(parameters)
-
-    # クッキー数の比較
-    # 現在リクエストクッキーが多いと True
-    def comparison_number_cookie(self, current_cookies, cookies):
-        ccookies = {}
-        for current_cookie in current_cookies:
-            if current_cookie.getType() == IParameter.PARAM_COOKIE:
-                ccookies[current_cookie.getName()] = current_cookie.getValue()
-        return len(ccookies) > len(cookies)
-
-    # ヘッダー値の比較
-    # 現在リクエストヘッダー値が1つでも違うと True
-    def comparison_value_header(self, current_headers, headers):
-        for current_header in current_headers:
-            ch = current_header.split(": ", 1)
-            if len(ch) == 2 and ch[0] != "Cookie":
-                if ch[0] in headers.keys():
-                    return ch[1] != headers[ch[0]]
-        return False
-    
-    # パラメータ値の比較
-    # 現在リクエストパラメータ値が1つでも違うと True
-    def comparison_value_parameter(self, current_parameters, parameters):
-        for current_parameter in current_parameters:
-            if current_parameter.getType() != IParameter.PARAM_COOKIE:
-                if current_parameter.getName() in parameters.keys():
-                    return current_parameter.getValue() != parameters[current_parameter.getName()]
-        return False
-
-    # クッキー値の比較
-    # 現在リクエストクッキー値が1つでも違うと True
-    def comparison_value_cookie(self, current_cookies, cookies):
-        for current_cookie in current_cookies:
-            if current_cookie.getType() == IParameter.PARAM_COOKIE:
-                if current_cookie.getName() in cookies.keys():
-                    return current_cookie.getValue() != cookies[current_cookie.getName()]
-        return False
 
 class RequestDictDB():
     def __init__(self):
