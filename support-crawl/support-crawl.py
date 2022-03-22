@@ -146,7 +146,7 @@ class RequestDictDB():
         parameters      = requestInfo.getParameters()
         method_url      = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
 
-        self.__REQUEST_DATA[method_url] = {"Headers": {}, "Cookies": {}, "Parameters": {}, "Copyed": True}
+        self.__REQUEST_DATA[method_url] = {"Headers": {}, "Cookies": {}, "Parameters": {}}
         self.set_headers(method_url, headers)
         self.set_parameters(method_url, parameters)
         self.set_cookies(method_url, parameters)
@@ -169,9 +169,6 @@ class RequestDictDB():
         for cookie in cookies:
             if cookie.getType() == IParameter.PARAM_COOKIE:
                 data[cookie.getName()] = cookie.getValue()
-
-    def set_copy(self, key):
-        self.__REQUEST_DATA[key]['Copyed'] = True
 
     def get_request_info(self, key):
         return self.__REQUEST_DATA[key]
