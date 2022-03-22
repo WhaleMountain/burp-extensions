@@ -6,7 +6,6 @@ from burp import IParameter
 from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
 from burp import IContextMenuInvocation
-from java.io import PrintWriter, File
 from javax.swing import JMenuItem
 from java.awt import Toolkit
 from java.awt.datatransfer import Clipboard, StringSelection
@@ -15,6 +14,9 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
     def __init__(self):
         self.extentionName = "Support Crawl"
         self.menuName = "Copy Request TSV (FULL)"
+        self.comp_color = "gray"
+        self.copy_color = 'pink'
+        self.comment = "Already copied"
         self.rdb = RequestDictDB()
         self.rcmp = RequestComparison()
         self.cptsv = CopyToTsv()
@@ -22,7 +24,6 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
         self._helpers   = callbacks.getHelpers()
-        self._stdout    = PrintWriter(callbacks.getStdout(), True) #self._stdout.println()
 
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerContextMenuFactory(self)
@@ -42,6 +43,14 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
 
         if not self._callbacks.isInScope(url):
             return
+        
+        if self.rdb.exists_request(method_url):
+            saved_request = self.rdb.get_request_info(method_url)
+            if (self.rcmp.comparsion_header(headers, saved_request['Headers'])
+            and self.rcmp.comparsion_parameter(parameters, saved_request['Parameters'])
+            and self.rcmp.comparsion_cookies(parameters, saved_request['Cookies'])):
+                messageInfo.setHighlight(self.comp_color)
+                messageInfo.setComment(self.comment)
 
     def createMenuItems(self, invocation):
         menu = []
@@ -53,6 +62,8 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
         for messageInfo in inv.getSelectedMessages():
             requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
             tsv += self.cptsv.makeTsv(requestInfo)
+            self.rdb.set_request(requestInfo)
+            messageInfo.setHighlight(self.copy_color)
         self.cptsv.copyTsv(tsv)
 
 class CopyToTsv():
@@ -99,40 +110,65 @@ class CopyToTsv():
         self.clipboard.setContents(selection, selection)
 
 class RequestComparison():
-    # ヘッダー数の比較
-    # 現在リクエストヘッダーが多いと True
-    def comparison_length_header(self, current_headers, headers):
-        cheader = {}
+    # ヘッダーの比較
+    def comparsion_header(self, current_headers, headers):
+        cheaders = {}
         for current_header in current_headers:
             ch = current_header.split(": ", 1)
-            if len(ch) == 2 and h[0] != "Cookie":
-                cheader[ch[0]] = ch[1]
-        return len(cheader) > len(headers)
+            if len(ch) == 2 and ch[0] != "Cookie":
+                cheaders[ch[0]] = ch[1]
+        return cheaders == headers
+    
+    # パラメータの比較
+    def comparsion_parameter(self, current_parameters, parameters):
+        cparameters = {}
+        for current_parameter in current_parameters:
+            if current_parameter.getType() != IParameter.PARAM_COOKIE:
+                cparameters[current_parameter.getName()] = current_parameter.getValue()
+        return cparameters == parameters
+
+    # クッキーの比較
+    def comparsion_cookies(self, current_cookies, cookies):
+        ccookies = {}
+        for current_cookie in current_cookies:
+            if current_cookie.getType() == IParameter.PARAM_COOKIE:
+                ccookies[current_cookie.getName()] = current_cookie.getValue()
+        return ccookies == cookies 
+
+    # ヘッダー数の比較
+    # 現在リクエストヘッダーが多いと True
+    def comparison_number_header(self, current_headers, headers):
+        cheaders = {}
+        for current_header in current_headers:
+            ch = current_header.split(": ", 1)
+            if len(ch) == 2 and ch[0] != "Cookie":
+                cheaders[ch[0]] = ch[1]
+        return len(cheaders) > len(headers)
     
     # パラメータ数の比較
     # 現在リクエストパラメータが多いと True
-    def comparison_length_parameter(self, current_parameters, parameters):
-        cparameter = {}
+    def comparison_number_parameter(self, current_parameters, parameters):
+        cparameters = {}
         for current_parameter in current_parameters:
             if current_parameter.getType() != IParameter.PARAM_COOKIE:
-                cparameter[current_parameter.getName()] = current_parameter.getValue()
-        return len(cparameter) > len(parameters)
+                cparameters[current_parameter.getName()] = current_parameter.getValue()
+        return len(cparameters) > len(parameters)
 
     # クッキー数の比較
     # 現在リクエストクッキーが多いと True
-    def comparison_length_cookie(self, current_cookies, cookies):
-        ccookie = {}
+    def comparison_number_cookie(self, current_cookies, cookies):
+        ccookies = {}
         for current_cookie in current_cookies:
             if current_cookie.getType() == IParameter.PARAM_COOKIE:
-                ccookie[current_cookie.getName()] = current_cookie.getValue()
-        return len(ccookie) > len(cookies)
+                ccookies[current_cookie.getName()] = current_cookie.getValue()
+        return len(ccookies) > len(cookies)
 
     # ヘッダー値の比較
     # 現在リクエストヘッダー値が1つでも違うと True
     def comparison_value_header(self, current_headers, headers):
         for current_header in current_headers:
             ch = current_header.split(": ", 1)
-            if len(ch) == 2 and h[0] != "Cookie":
+            if len(ch) == 2 and ch[0] != "Cookie":
                 if ch[0] in headers.keys():
                     return ch[1] != headers[ch[0]]
         return False
@@ -159,8 +195,17 @@ class RequestDictDB():
     def __init__(self):
         self.__REQUEST_DATA = {}
 
-    def set_request(self, key):
-        self.__REQUEST_DATA[key] = {"Headers": {}, "Cookies": {}, "Parameters": {}, "Copyed": False}
+    def set_request(self, requestInfo):
+        url             = requestInfo.getUrl()
+        method          = requestInfo.getMethod()
+        headers         = requestInfo.getHeaders()
+        parameters      = requestInfo.getParameters()
+        method_url      = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
+
+        self.__REQUEST_DATA[method_url] = {"Headers": {}, "Cookies": {}, "Parameters": {}, "Copyed": True}
+        self.set_headers(method_url, headers)
+        self.set_parameters(method_url, parameters)
+        self.set_cookies(method_url, parameters)
 
     def set_headers(self, key, headers):
         data = self.__REQUEST_DATA[key]['Headers']
@@ -182,7 +227,7 @@ class RequestDictDB():
                 data[cookie.getName()] = cookie.getValue()
 
     def set_copy(self, key):
-        pass
+        self.__REQUEST_DATA[key]['Copyed'] = True
 
     def get_request_info(self, key):
         return self.__REQUEST_DATA[key]
