@@ -1,5 +1,4 @@
-# coding: UTF-8
-
+# coding: utf-8
 from burp import IBurpExtender
 from burp import IProxyListener
 from burp import IParameter
@@ -63,7 +62,7 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
             requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
             tsv += self.cptsv.makeTsv(requestInfo)
             self.rdb.set_request(requestInfo)
-            messageInfo.setHighlight(self.copy_color)
+            #messageInfo.setHighlight(self.copy_color)
         self.cptsv.copyTsv(tsv)
 
 class CopyToTsv():

@@ -10,8 +10,8 @@ class BurpExtender(IBurpExtender, IProxyListener):
     def __init__(self):
         self.extentionName       = "Highlight GraphQL Request"
         self.color               = "cyan" # red, magenta, yellow, green, cyan, blue, pink, purple, gray
-        self.endpoint            = "/graphql"
-        self.graphqlRequests     = set()
+        self.endpoint            = "graphql"
+        self.graphqlQuery        = set()
     
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -21,9 +21,10 @@ class BurpExtender(IBurpExtender, IProxyListener):
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerProxyListener(self)
 
-        for messageInfo in callbacks.getProxyHistory():
-            requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
-            self.uniqueRequest(requestInfo)
+        # Burp起動時にHttp Historyを読み込ませたい場合 下3行のコメントを外す
+        #for messageInfo in callbacks.getProxyHistory():
+        #    requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
+        #    self.uniqueRequest(requestInfo)
     
     def processProxyMessage(self, messageIsRequest, message):
         # リクエストのみ
@@ -35,7 +36,7 @@ class BurpExtender(IBurpExtender, IProxyListener):
         if self.uniqueRequest(requestInfo):
             messageInfo.setHighlight(self.color)
 
-    # ユニークなGraphQLのリクエストならTrueを返す
+    # ユニークなGraphQLのQueryならTrueを返す
     def uniqueRequest(self, requestInfo):
         url     = requestInfo.getUrl()
         method  = requestInfo.getMethod()
@@ -54,8 +55,8 @@ class BurpExtender(IBurpExtender, IProxyListener):
             if param.getType() == IParameter.PARAM_JSON and param.getName() == "query":
                 query = param.getValue()
 
-        if query != "" and query not in self.graphqlRequests:
-            self.graphqlRequests.add(query)
+        if query != "" and query not in self.graphqlQuery:
+            self.graphqlQuery.add(query)
             return True
         
         return False
