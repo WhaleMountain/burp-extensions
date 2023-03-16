@@ -1,6 +1,5 @@
 # coding: utf-8
 from burp import IBurpExtender
-from burp import IProxyListener
 from burp import IParameter
 from burp import IBurpExtenderCallbacks
 from burp import IContextMenuFactory
@@ -11,18 +10,14 @@ from java.awt.datatransfer import Clipboard, StringSelection
 import random
 import string
 
-class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextMenuInvocation):
+class BurpExtender(IBurpExtender, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
         self.extentionName = "Support Crawl"
-        #self.menuName = "Copy Request TSV (Full)"
         self.menuName = "Parameter Check"
-        #self.comp_color = "gray"
-        #self.copy_color = 'pink'
         self.comp_color = "none" # red, magenta, yellow, green, cyan, blue, pink, purple, gray, none=white
         self.comment = "No.{}, <= #{} "
         self.rdb = RequestDictDB()
         self.rcmp = RequestComparsion()
-        #self.cptsv = CopyToTsv()
 
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -30,31 +25,9 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
 
         callbacks.setExtensionName(self.extentionName)
         callbacks.registerContextMenuFactory(self)
-        #callbacks.registerProxyListener(self)
-
-    #def processProxyMessage(self, messageIsRequest, message):
-        #if not messageIsRequest:
-        #    return
-        #messageInfo = message.getMessageInfo()
-        #requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
-        #url             = requestInfo.getUrl()
-        #method          = requestInfo.getMethod()
-        #headers         = requestInfo.getHeaders()
-        #parameters      = requestInfo.getParameters()
-        #method_url      = '{}{}://{}{}'.format(method, url.getProtocol(), url.getHost(), url.getPath())
-        #if not self._callbacks.isInScope(url):
-        #    return
-        #if self.rdb.exists_request(method_url):
-        #    saved_request = self.rdb.get_request_info(method_url)
-        #    if (self.rcmp.comparsion_header(headers, saved_request['Headers'])
-        #    and self.rcmp.comparsion_parameter(parameters, saved_request['Parameters'])
-        #    and self.rcmp.comparsion_cookies(parameters, saved_request['Cookies'])):
-        #        messageInfo.setHighlight(self.comp_color)
-        #        messageInfo.setComment(self.comment)
 
     def createMenuItems(self, invocation):
         menu = []
-        #menu.append(JMenuItem(self.menuName, actionPerformed=lambda x, inv=invocation: self.copyToTsv(inv)))
         menu.append(JMenuItem(self.menuName, actionPerformed=lambda x, inv=invocation: self.parameterCheck(inv)))
         return menu
 
@@ -75,54 +48,6 @@ class BurpExtender(IBurpExtender, IProxyListener, IContextMenuFactory, IContextM
 
             self.rdb.set_request(idx+1, requestInfo)
         self.rdb.delete_requests()
-    
-    #def copyToTsv(self, inv):
-        #tsv = ""
-        #for messageInfo in inv.getSelectedMessages():
-        #    requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
-        #    tsv += self.cptsv.makeTsv(requestInfo)
-        #    self.rdb.set_request(requestInfo)
-        #    messageInfo.setHighlight(self.copy_color)
-        #self.cptsv.copyTsv(tsv)
-
-#class CopyToTsv():
-    #def __init__(self):
-        #self.toolkit = Toolkit.getDefaultToolkit()
-        #self.clipboard = self.toolkit.getSystemClipboard()
-        #self.tsv_head = "\"{method}\"\t\"{uri}\"\t\"-\"\t\"-\"\t\"-\"\n"
-        #self.tsv_data = "\"\"\t\"\"\t\"{kind}\"\t\"{key}\"\t\"{value}\"\n"
-
-    #def makeTsv(self, requestInfo):
-        #url             = requestInfo.getUrl()
-        #method          = requestInfo.getMethod()
-        #headers         = requestInfo.getHeaders()
-        #parameters      = requestInfo.getParameters()
-        #turl      = '{}://{}{}'.format(url.getProtocol(), url.getHost(), url.getPath())
-        #tsv = self.tsv_head.format(method=method, uri=turl)
-        #for idx, path in enumerate(url.getPath().split("/")):
-        #    if path == "":
-        #        continue
-        #    tsv += self.tsv_data.format(kind="Path", key=idx, value=path)
-        #for header in headers:
-        #    h = header.split(": ", 1)
-        #    if len(h) == 2 and h[0] != "Cookie":
-        #        tsv += self.tsv_data.format(kind="Header", key=h[0], value=h[1].encode('utf-8'))
-        #for parameter in parameters:
-        #    if parameter.getType() == IParameter.PARAM_COOKIE:
-        #        tsv += self.tsv_data.format(kind="Cookie", key=parameter.getName(), value=parameter.getValue().encode('utf-8'))
-        #    elif parameter.getType() == IParameter.PARAM_URL:
-        #        tsv += self.tsv_data.format(kind="URL", key=parameter.getName(), value=parameter.getValue().encode('utf-8'))
-        #    elif parameter.getType() == IParameter.PARAM_BODY:
-        #        tsv += self.tsv_data.format(kind="Body", key=parameter.getName(), value=parameter.getValue().encode('utf-8'))
-        #    elif parameter.getType() == IParameter.PARAM_JSON:
-        #        tsv += self.tsv_data.format(kind="Body", key="jsonData["+parameter.getName()+"]", value=parameter.getValue().encode('utf-8'))
-        #    else:
-        #        tsv += self.tsv_data.format(kind="Unknown", key=parameter.getName(), value=parameter.getValue().encode('utf-8'))
-        #return tsv
-        
-    #def copyTsv(self, tsv):
-        #selection = StringSelection(tsv)
-        #self.clipboard.setContents(selection, selection)
 
 class RequestComparsion():
     # ヘッダーの比較
