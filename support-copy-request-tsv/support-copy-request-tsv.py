@@ -247,12 +247,15 @@ class BurpExtender(IBurpExtender, IProxyListener, ITab, ActionListener, IContext
         callbacks.addSuiteTab(self)
 
     def processProxyMessage(self, messageIsRequest, message):
-        # リクエストのみ
+        # レスポンスが帰ってくるリクエストのみ
         if not messageIsRequest:
-            return
-        
-        messageInfo = message.getMessageInfo()
-        self.comparisonRequest(self.HISTORY_REFERENCE_OFFSET + message.getMessageReference() + 1, messageInfo)
+            messageInfo = message.getMessageInfo()
+            self.comparisonRequest(self.HISTORY_REFERENCE_OFFSET + message.getMessageReference() + 1, messageInfo)
+        # リクエストのみ
+        #if not messageIsRequest:
+        #    return
+        #messageInfo = message.getMessageInfo()
+        #self.comparisonRequest(self.HISTORY_REFERENCE_OFFSET + message.getMessageReference() + 1, messageInfo)
 
     def createMenuItems(self, invocation):
         menu = []
