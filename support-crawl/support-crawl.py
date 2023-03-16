@@ -15,7 +15,7 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, IContextMenuInvocation):
         self.extentionName  = "Support Crawl"
         self.menuName       = "Parameter Check"
         self.comp_color     = "none" # red, magenta, yellow, green, cyan, blue, pink, purple, gray, none=white
-        self.comment        = "No.{} is equal to No.{}"
+        self.comment        = "No.{}, is equal No.{}"
         self.rdb            = RequestDictDB()
         self.rcmp           = RequestComparsion()
 
