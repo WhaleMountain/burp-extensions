@@ -12,12 +12,12 @@ import string
 
 class BurpExtender(IBurpExtender, IContextMenuFactory, IContextMenuInvocation):
     def __init__(self):
-        self.extentionName = "Support Crawl"
-        self.menuName = "Parameter Check"
-        self.comp_color = "none" # red, magenta, yellow, green, cyan, blue, pink, purple, gray, none=white
-        self.comment = "No.{}, <= #{} "
-        self.rdb = RequestDictDB()
-        self.rcmp = RequestComparsion()
+        self.extentionName  = "Support Crawl"
+        self.menuName       = "Parameter Check"
+        self.comp_color     = "none" # red, magenta, yellow, green, cyan, blue, pink, purple, gray, none=white
+        self.comment        = "No.{}, <= #{} "
+        self.rdb            = RequestDictDB()
+        self.rcmp           = RequestComparsion()
 
     def	registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
@@ -33,7 +33,7 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, IContextMenuInvocation):
 
     def parameterCheck(self, inv):
         for idx, messageInfo in enumerate(inv.getSelectedMessages()):
-            requestInfo = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
+            requestInfo     = self._helpers.analyzeRequest(messageInfo.getHttpService(), messageInfo.getRequest())
             url             = requestInfo.getUrl()
             method          = requestInfo.getMethod()
             parameters      = requestInfo.getParameters()
@@ -43,7 +43,6 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, IContextMenuInvocation):
             for rkey, saved_request in self.rdb.get_request_info(method_url).items():
                 if self.rcmp.comparsion_parameter(parameters, saved_request['Parameters']):
                     messageInfo.setComment(self.comment.format(idx+1, saved_request['Request number']))
-                    messageInfo.setHighlight(self.comp_color)
                     break
 
             self.rdb.set_request(idx+1, requestInfo)
